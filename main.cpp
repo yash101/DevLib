@@ -50,6 +50,7 @@ void handle(int x) { exit(0); }
 
 struct cell
 {
+    int x, y
     float G, H;
     bool blocked;
     bool start;

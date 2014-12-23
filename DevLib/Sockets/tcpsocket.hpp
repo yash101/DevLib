@@ -25,7 +25,7 @@ namespace dev
         int c;
 
         //Constructors
-        TcpSocketServerConnection() { }
+        TcpSocketServerConnection() {}
         ~TcpSocketServerConnection() { close(connid); }
 
         //Functions

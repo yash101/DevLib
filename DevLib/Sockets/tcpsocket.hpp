@@ -44,6 +44,7 @@ namespace dev
         virtual void worker(dev::TcpSocketServerConnection connection);
         std::mutex allow_accept;
         bool accepting;
+        void vhost(int connectionid);
     public:
         TcpSocketServer();
         void start(int port);

@@ -65,17 +65,19 @@ namespace dev
         dev::Vector<T> unitVector() { return dev::Vector<T>(_x, _y) / magnitude(); }
 
         ////Pretty stuff
-        //Output a string with this converted to component form
+        //Output a string with this converted to component form (<1, 1>)
         std::string componentForm()
         {
             return toString(true);
         }
 
+        //Output a string with this converted to standard form (i + j)
         std::string standardForm()
         {
             return toString(false);
         }
 
+        //Component form and standard form functions together
         std::string toString(bool ComponentForm)
         {
             if(ComponentForm)
@@ -101,8 +103,12 @@ namespace dev
         }
     };
 
+    //Some typedef's for typical vector types. Just to make coding a bit simpler to understand
     typedef dev::Vector<float> Vec2f;
     typedef dev::Vector<int> Vec2i;
     typedef dev::Vector<double> Vec2d;
+    typedef dev::Vector<long double> Vec2ld;
+    typedef dev::Vector<long> Vec2l;
+    typedef dev::Vector<long long> Vec2ll;
 }
 #endif // VECTOR_HPP

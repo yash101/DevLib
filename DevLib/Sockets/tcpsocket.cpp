@@ -38,39 +38,24 @@ void dev::TcpSocketServer::worker(dev::TcpSocketServerConnection connection)
     connection.put("dev::TcpSocketServerConnection is the class which allows you to interact with the socket connection!\n");
 }
 
-//Listen for requests and create worker threads
-void dev::TcpSocketServer::listener()
+void dev::TcpSocketServer::vhost(int connectionid)
 {
-    //This is the connection class. This handles the connection and allows the worker to communicate with the socket!
     dev::TcpSocketServerConnection connection;
     connection.c = sizeof(struct sockaddr_in);
-
-    //Flag that we are accepting a new connection so that we don't accept twice or more at the same time!
-    //If we accept two connections simultaneously, bad things happen!
-    allow_accept.lock();
-    if(!accepting) { accepting = true; } else { return; }
-    allow_accept.unlock();
-
-    //Accept a new connection
-    connection.connid = accept(socketFD, (struct sockaddr*) &address, (socklen_t*) &connection.c);
-
-    //Reset the flag so that we don't freeze up the server!
-    allow_accept.lock();
-    accepting = false;
-    allow_accept.unlock();
-
-    //Create a new thread so another connection can be taken while we are working!
-    std::thread(&dev::TcpSocketServer::listener, this).detach();
-
-    //Check to make sure that we were able to accept the connection. If not, send a message to STDOUT.
-    if(connection.connid < 0) { std::cout << "Server Error: Unable to accept connection!" << std::endl; return; }
-
-    //Run the worker. We have created the socket now, so we should be happy to run!
+    connection.connid = connectionid;
     worker(connection);
+}
 
-    //Exit this thread. It's not needed anymore and can be discarded. If this isn't done, there will be a slow buildup ot blocked threads
-    //That's not something that anyone wants to see (hint hint...6000 threads for X. 100% CPU usage ;) )
-    return;
+void dev::TcpSocketServer::listener()
+{
+    while(true)
+    {
+        int fd;
+        int c = sizeof(struct sockaddr_in);
+        fd = accept(socketFD, (struct sockaddr*) &address, (socklen_t*) &c);
+        if(fd < 0) { std::cout << "Failed accepting new connection!" << std::endl; continue; }
+        std::thread(&dev::TcpSocketServer::vhost, this, fd).detach();
+    }
 }
 
 //Send a character to the client

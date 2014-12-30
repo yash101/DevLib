@@ -72,19 +72,27 @@ void send_response(dev::HttpServerRequest& req)
 
 void dev::HttpServer::worker(dev::TcpSocketServerConnection connection)
 {
-    std::cout << "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV" << std::endl;
-    dev::HttpServerRequest req = parseRequest(connection);
-    std::cout << "Request Parsed!" << std::endl;
-    std::cout << "Path: " << req.path << std::endl;
-    if(req.path == "") { std::cout << "Empty path!" << std::endl; return; }
-    req.connection = connection;
-    prepare_request(req);
-    std::cout << "Request Processed!" << std::endl;
-    request_handler(req);
-    std::cout << "Request Handled" << std::endl;
-    send_response(req);
-    std::cout << "Request Sent!" << std::endl;
-    std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^" << std::endl;
+    try
+    {
+        std::cout << "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV" << std::endl;
+        dev::HttpServerRequest req = parseRequest(connection);
+        std::cout << "Request Parsed!" << std::endl;
+        std::cout << "Path: " << req.path << std::endl;
+        if(req.path == "") { std::cout << "Empty path!" << std::endl; return; }
+        req.connection = connection;
+        prepare_request(req);
+        std::cout << "Request Processed!" << std::endl;
+        request_handler(req);
+        std::cout << "Request Handled" << std::endl;
+        send_response(req);
+        std::cout << "Request Sent!" << std::endl;
+        std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^" << std::endl;
+    }
+    catch(dev::SocketException& ex)
+    {
+        std::cout << "Unable to complete request because of thrown exception: [" << ex.what() << "]" << std::endl;
+    }
+
     return;
 }
 
@@ -134,7 +142,7 @@ dev::HttpServerRequest dev::HttpServer::parseRequest(dev::TcpSocketServerConnect
     //Download the request from the client
     while(buffer2.size() < HTTP_SERVER_MAX_REQUEST_SIZE)
     {
-        buffer2 = buffer2 + connection.read(8192);
+        buffer2 = buffer2 + connection.read(8192);  //Read 8 kilobyte chunks to keep ze speed up!
         //Check to see if we have hit the end of the request before we begin processing it!
         //We check to see if the last 4 characters are \r\n\r\n, the typical ending of a request
         if(buffer2.size() > 4)

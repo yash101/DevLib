@@ -2,6 +2,8 @@
 #define UDPSOCKET_HPP
 #include <sys/socket.h>
 #include <mutex>
+#include <netinet/in.h>
+#include "../Exceptions.hpp"
 
 namespace dev
 {
@@ -14,8 +16,8 @@ namespace dev
 
         void put(char byte);
         void put(std::string str);
-        int read();
         std::string read(int length);
+        int read();
     };
 
     class UdpSocketServer

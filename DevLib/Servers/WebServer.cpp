@@ -1,5 +1,6 @@
 #include "WebServer.hpp"
 #include "../string.hpp"
+#include "../misc.hpp"
 
 #include <string>
 #include <cstring>
@@ -51,7 +52,9 @@ void prepare_request(dev::HttpServerRequest& req)
 {
     req.response = "";
     req.status_code = 200;
-    req.headers["Content-Type"] = "text/html";
+    req.mime = "text/html";
+    req.headers["Server"] = "DevLibWeb/1.0";
+    req.charset = "UTF-8";
     parseGET(req);
     parsePOST(req);
 }
@@ -59,12 +62,13 @@ void prepare_request(dev::HttpServerRequest& req)
 void send_response(dev::HttpServerRequest& req)
 {
     std::stringstream response;
-    response << "HTTP-Version: " << req.http_ver << " " << req.status_code << " OK" << HTTP_LINE_ENDING;
-    response << "Content-Length: " << req.response.size() << HTTP_LINE_ENDING;
+    response << req.http_ver << " " << req.status_code << " OK" << HTTP_LINE_ENDING;
+    response << "Content-Type: " << req.mime << "; Charset=" << req.charset << HTTP_LINE_ENDING;
     for(dev::strmap::const_iterator it = req.headers.begin(); it != req.headers.end(); ++it)
     {
         response << it->first << ": " << it->second << HTTP_LINE_ENDING;
     }
+    response << "Content-Length: " << req.response.size() << HTTP_LINE_ENDING;
     response << HTTP_LINE_ENDING;
     response << req.response;
     req.connection.put(response.str());
@@ -74,25 +78,17 @@ void dev::HttpServer::worker(dev::TcpSocketServerConnection connection)
 {
     try
     {
-        std::cout << "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV" << std::endl;
         dev::HttpServerRequest req = parseRequest(connection);
-        std::cout << "Request Parsed!" << std::endl;
-        std::cout << "Path: " << req.path << std::endl;
         if(req.path == "") { std::cout << "Empty path!" << std::endl; return; }
         req.connection = connection;
         prepare_request(req);
-        std::cout << "Request Processed!" << std::endl;
         request_handler(req);
-        std::cout << "Request Handled" << std::endl;
         send_response(req);
-        std::cout << "Request Sent!" << std::endl;
-        std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^" << std::endl;
     }
     catch(dev::SocketException& ex)
     {
         std::cout << "Unable to complete request because of thrown exception: [" << ex.what() << "]" << std::endl;
     }
-
     return;
 }
 
@@ -112,7 +108,7 @@ dev::HttpServerRequest generateRequest(std::vector<std::string> lines, std::stri
     if(topLineStuff.size() < 2) { return request; }
     request.request_type = topLineStuff[0] == "GET";
     request.path = topLineStuff[1];
-    request.http_ver = topLineStuff[2];
+    request.http_ver = "HTTP/1.0";
 
     if(lines.size() < 2) { return request; }
     for(unsigned int i = 1; i < lines.size(); i++)

@@ -14,6 +14,8 @@
 
 #include "../Exceptions.hpp"
 
+#include <functional>
+
 #define DEFAULT_TCP_ARRAY_LENGTH    1024    //bytes
 namespace dev
 {
@@ -49,6 +51,16 @@ namespace dev
         TcpSocketServer();
         void start(int port);
         ~TcpSocketServer();
+    };
+
+    class TcpSocketServerInALambda : public dev::TcpSocketServer
+    {
+    private:
+        std::function<void(dev::TcpSocketServerConnection connection)> func;
+    public:
+        TcpSocketServerInALambda(std::function<void(dev::TcpSocketServerConnection connection)> worker_func)
+        { func = worker_func; }
+        void worker(dev::TcpSocketServerConnection connection) { func(connection); }
     };
 }
 

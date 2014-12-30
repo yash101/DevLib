@@ -40,10 +40,17 @@ void dev::TcpSocketServer::worker(dev::TcpSocketServerConnection connection)
 
 void dev::TcpSocketServer::vhost(int connectionid)
 {
-    dev::TcpSocketServerConnection connection;
-    connection.c = sizeof(struct sockaddr_in);
-    connection.connid = connectionid;
-    worker(connection);
+    try
+    {
+        dev::TcpSocketServerConnection connection;
+        connection.c = sizeof(struct sockaddr_in);
+        connection.connid = connectionid;
+        worker(connection);
+    }
+    catch(std::exception& e)
+    {
+        std::cout << "Exited worker function due to error: " << e.what() << std::endl;
+    }
 }
 
 void dev::TcpSocketServer::listener()
@@ -61,7 +68,10 @@ void dev::TcpSocketServer::listener()
 //Send a character to the client
 void dev::TcpSocketServerConnection::put(std::string str)
 {
-    write(connid, str.c_str(), str.size());
+    if(write(connid, str.c_str(), str.size()) < 0)
+    {
+        throw dev::SocketException("DevLib Error TCP_PUT 0. Unable to write to socket!");
+    }
 }
 
 //Send a character to the client

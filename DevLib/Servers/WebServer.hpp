@@ -4,6 +4,7 @@
 #include "../compat.hpp"
 #ifdef CXX11_SUPPORTED
 #include <unordered_map>
+#include <functional>
 #else
 #include <map>
 #endif
@@ -38,6 +39,8 @@ namespace dev
         std::string foreign_ip;
         std::string path;
         std::string http_ver;
+        std::string mime;
+        std::string charset;
 
         dev::TcpSocketServerConnection connection;
 
@@ -56,5 +59,25 @@ namespace dev
         void worker(dev::TcpSocketServerConnection connection);
         dev::HttpServerRequest parseRequest(dev::TcpSocketServerConnection& request);
     };
+#ifdef CXX11_SUPPORTED
+    class HttpServerInALambda : public dev::HttpServer
+    {
+    private:
+        std::function<void(dev::HttpServerRequest& request)> request_handler_func;
+        void request_handler(dev::HttpServerRequest& request)
+        {
+            try
+            {
+                request_handler_func(request);
+            }
+            catch(std::exception& e)
+            {
+                std::cout << "Request Handler Terminated Due to Thrown Exception: " << e.what() << std::endl;
+            }
+        }
+    public:
+        HttpServerInALambda(std::function<void(dev::HttpServerRequest& request)> func) : request_handler_func(func) {}
+    };
+#endif
 }
 #endif // WEBSERVER_H

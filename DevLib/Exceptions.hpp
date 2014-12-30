@@ -9,6 +9,7 @@ namespace dev
     private:
         std::string _message;
     public:
+        ~SocketException() throw() {}
         SocketException(std::string message) : _message(message) {}
         virtual const char* what() const throw() { return _message.c_str(); }
     };
@@ -18,6 +19,7 @@ namespace dev
     private:
         std::string _message;
     public:
+        ~AIException() throw() {}
         AIException(std::string message) : _message(message) {}
         virtual const char* what() const throw() { return _message.c_str(); }
     };

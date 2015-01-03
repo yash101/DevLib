@@ -29,6 +29,50 @@ namespace dev
 
     template<typename Type> void fromString(Type& x, std::string source)
     { std::stringstream str(source); str >> x; return; }
+
+    inline bool contains(char find, std::string dict)
+    {
+        for(unsigned int i = 0; i < dict.size(); i++)
+        {
+            if(dict[i] == find)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    inline std::string trim(std::string in)
+    {
+        std::string str = in;
+        for(unsigned int i = 0; i < str.size(); i++)
+        {
+            if(dev::contains(str[i], " \n\r\t"))
+            {
+                str = str.substr(1, str.size());
+            }
+        }
+
+        for(int i = (unsigned int) str.size(); i >= 0; i--)
+        {
+            if(dev::contains(str[i], " \n\r\t"))
+            {
+                str = str.substr(0, str.size() - 1);
+            }
+        }
+
+        return str;
+    }
+
+    inline std::string tolower(std::string in)
+    {
+        std::string o;
+        for(unsigned int i = 0; i < in.size(); i++)
+        {
+            o += std::tolower(in[i]);
+        }
+        return o;
+    }
 }
 
 inline bool operator==(std::string a, std::string b) { return !strcmp(a.c_str(), b.c_str()); }

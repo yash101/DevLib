@@ -1,4 +1,4 @@
-#include "tcpsocket.hpp"
+#include "tcpserver.hpp"
 #include <arpa/inet.h>
 #include <thread>
 #include <iostream>
@@ -6,15 +6,15 @@
 #include "../string.hpp"
 
 //Constructor
-dev::TcpSocketServer::TcpSocketServer() : accepting(false) {}
+dev::TcpSocketServer::TcpSocketServer() {}
 
 //Sets the listening port and starts the server.
 void dev::TcpSocketServer::start(int port)
 {
     //Create the socket file descriptor
-    socketFD = socket(AF_INET, SOCK_STREAM, 0);
+    fd = socket(AF_INET, SOCK_STREAM, 0);
     //Verify that we were able to create the socket server and throw and exception if we didn't
-    if(socketFD < 0) { throw SocketException("Unable to Create Socket!"); }
+    if(fd < 0) { throw SocketException("Unable to Create Socket!"); }
     //Clear the address structure.
     memset((char*) &address, 0, sizeof(address));
     //Set up the address and prepare to start serving
@@ -22,9 +22,9 @@ void dev::TcpSocketServer::start(int port)
     address.sin_addr.s_addr = htonl(INADDR_ANY);
     address.sin_port = htons(port);
     //Bind to the address/port specified. If this isn't successful, an exception will be thrown
-    if(bind(socketFD, (struct sockaddr*) &address, sizeof(address)) < 0) { throw SocketException("Unable to bind to socket!"); }
+    if(bind(fd, (struct sockaddr*) &address, sizeof(address)) < 0) { throw SocketException("Unable to bind to socket!"); }
     //Begin listening in the socket
-    listen(socketFD, 3);
+    listen(fd, 3);
     //Launch a new thread to listen for us. This thread detaches to allow this function to quite afterwards
     std::thread(&dev::TcpSocketServer::listener, this).detach();
 }
@@ -57,11 +57,14 @@ void dev::TcpSocketServer::listener()
 {
     while(true)
     {
-        int fd;
         int c = sizeof(struct sockaddr_in);
-        fd = accept(socketFD, (struct sockaddr*) &address, (socklen_t*) &c);
-        if(fd < 0) { std::cout << "Failed accepting new connection!" << std::endl; continue; }
-        std::thread(&dev::TcpSocketServer::vhost, this, fd).detach();
+        int newfd = accept(fd, (struct sockaddr*) &address, (socklen_t*) &c);
+        if(newfd < 0)
+        {
+            std::cout << "Failed accepting new connection! Errno set to: " << strerror(errno) << std::endl;
+            continue;
+        }
+        std::thread(&dev::TcpSocketServer::vhost, this, newfd).detach();
     }
 }
 
@@ -80,6 +83,7 @@ void dev::TcpSocketServerConnection::put(char byte)
     put(dev::toString(byte));
 }
 
+//Reads a std::string from the client!
 std::string dev::TcpSocketServerConnection::read(int length)
 {
     char* x = new char[length];         //Allocate some memory to read into
@@ -100,8 +104,32 @@ int dev::TcpSocketServerConnection::read()
     return (int) read(1)[0];
 }
 
-//This is the destructor. Here, all we have to do is close the socket. Kudos for using C++ containers which automatically perform GC! ;)
-dev::TcpSocketServer::~TcpSocketServer()
+//Downloads a line from the client, ending with the specified character!
+std::string dev::TcpSocketServerConnection::getline(char end)
 {
-    close(socketFD);
+    std::string out;
+    while(true)
+    {
+        char c = read(1)[0];
+        if(c == end) { break; }
+        out += c;
+    }
+    return out;
+}
+
+//Same as below, but ending with a std::string!
+std::string dev::TcpSocketServerConnection::getline(std::string end)
+{
+    std::string out;
+    while(true)
+    {
+        if(out.size() >= end.size())
+        {
+            if(out.substr(out.size() - end.size(), out.size()) == end)
+            {
+                return out.substr(0, out.size() - end.size());
+            }
+        }
+        out += (char) read();
+    }
 }

@@ -28,6 +28,7 @@ namespace dev
 
         //Constructors
         TcpSocketServerConnection() {}
+        ~TcpSocketServerConnection() { close(connid); }
 
         //Functions
         void put(char byte);

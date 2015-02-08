@@ -33,5 +33,17 @@ namespace dev
         HTTPException(std::string message) : _message(message) {}
         virtual const char* what() const throw() { return _message.c_str(); }
     };
+
+    class exception : public std::exception
+    {
+    private:
+        std::string _message;
+    public:
+        ~exception() throw() {}
+        exception(std::string message) : _message(message) {}
+        virtual const char* what() const throw() { return _message.c_str(); }
+    };
+
+    typedef dev::exception VectorException;
 }
 #endif // EXCEPTIONS_HPP

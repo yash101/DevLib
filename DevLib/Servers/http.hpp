@@ -31,6 +31,8 @@ namespace dev
         std::unordered_map<std::string, std::string> queries;
         std::unordered_map<std::string, std::string> post;
         std::unordered_map<std::string, std::string> get;
+        //Holds the incoming files from the server
+        std::unordered_map<std::string, std::string> files;
         //Incoming headers
         std::unordered_map<std::string, std::string> incoming_headers;
         std::unordered_map<std::string, std::string> headers;
@@ -59,7 +61,7 @@ namespace dev
         http_server();
     };
 
-    class lambda_http_server : public dev::TcpSocketServer
+    class lambda_http_server : public dev::http_server
     {
     private:
         std::function<void(dev::http_session& session)> wfunc;

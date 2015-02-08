@@ -1,16 +1,16 @@
 #include "http.hpp"
 #include <cstring>
 #include "../string.hpp"
+#include <vector>
 #define HEND HTTP_LINE_ENDING
 
 //Default constructor for the http server
 dev::http_server::http_server() {}
-
 void dev::http_server::worker(dev::TcpSocketServerConnection connection)
 {
+    http_session session;
     try
     {
-        http_session session;
         session.connection = connection;
         session.parse_request();
         session.prepare_request();
@@ -20,6 +20,8 @@ void dev::http_server::worker(dev::TcpSocketServerConnection connection)
     catch(std::exception& e)
     {
         std::cout << "Error while processing request! what() -> " << e.what() << std::endl;
+        session.connection.close_socket();
+        return;
     }
 }
 
@@ -40,10 +42,10 @@ void dev::http_session::parse_request()
     else { throw dev::HTTPException("Unknown HTTP Method!"); }
 
     //Determine the path the client is requesting
-    path = dev::trim(connection.getline(' '));
+    path = dev::itrim(connection.getline(' '));
 
     //Determine the protocol the client wants us to use
-    protocol = dev::trim(connection.getline("\r\n"));
+    protocol = dev::itrim(connection.getline("\r\n"));
 
     //Download the rest of the request header
     std::string buffer;
@@ -97,25 +99,88 @@ void dev::http_session::parse_request()
     //Check if we recieved any data in the POST (get the joke there?)
     if(request_type == POST)
     {
-        int length = std::atoi(incoming_headers["content-length"].c_str());
-        std::string postvars;
-        //Download the POST data
-        for(int i = 0; i < length; i++)
+        //Basic POST requests
+        if(dev::tolower(incoming_headers["content-type"]).find("form-data") == std::string::npos)
         {
-            postvars += (char) connection.read();
-        }
-
-        std::stringstream x(postvars);
-        while(std::getline(x, buffer, '&')) //Explode the query into it's different parts!
-        {
-            std::stringstream z(buffer);
-            std::string key, value;
-            std::getline(z, key, '=');
-            std::getline(z, value);
-            if(key != "")
+            int length = std::atoi(incoming_headers["content-length"].c_str());
+            std::string postvars;
+            //Download the POST data
+            for(int i = 0; i < length; i++)
             {
-                post[key] = dev::urldecode(value);
-                queries[key] = dev::urldecode(value);
+                postvars += (char) connection.read();
+            }
+
+            std::stringstream x(postvars);
+            while(std::getline(x, buffer, '&')) //Explode the query into it's different parts!
+            {
+                std::stringstream z(buffer);
+                std::string key, value;
+                std::getline(z, key, '=');
+                std::getline(z, value);
+                if(key != "")
+                {
+                    post[key] = dev::urldecode(value);
+                    queries[key] = dev::urldecode(value);
+                }
+            }
+        }
+        else
+        {
+            std::string boundary = incoming_headers["content-type"].substr(dev::charPos(incoming_headers["content-type"], '=') + 1, incoming_headers["content-type"].size() - 1);
+            int length = std::atoi(incoming_headers["content-length"].c_str());
+            std::string inc;
+            //Download the request body, which contains the uploaded files
+            for(int i = 0; i < length; i++)
+            {
+                inc += (char) connection.read();
+            }
+            if(inc[inc.size()] == '-' || inc[inc.size() - 1] == '-') { inc = inc.substr(0, inc.size() - 2); }
+
+            //The general purpose buffer that we will use
+            std::string buffer;
+            //This contains the entire request body, for us to break up and process!
+            std::stringstream x(inc);
+            std::vector<std::string> lines;
+            while(dev::getline(buffer, boundary, x))
+            {
+                lines.push_back(buffer);
+            }
+
+            //Clear our buffer so that we don't start appending to it accidentally
+            buffer = "";
+            //Process all of the boundaries
+            if(lines.size() > 1)
+            {
+                for(unsigned int i = 1; i < lines.size(); i++)
+                {
+                    //The current request part
+                    std::stringstream y(lines[i]);                      //Stringstreams allow us to serialize data and then process them
+                                                                        //We load this part of the body into it so we can process it!
+                    
+                    dev::getline(buffer, "\r\n", y);                    //Get the first line (content-disposition)
+                    
+                    std::string name = buffer.substr(dev::charPos(buffer, ';') + 8, buffer.size() - 1);     //Get the name of the field
+                    name = name.substr(0, dev::charPos(name, '"'));     //Process the name and get rid of the quotation marks!
+
+                    if(buffer.find("filename") != std::string::npos)    //If it is just a file value (filename field found)
+                    {
+                        dev::getline(buffer, "\r\n\r\n", y);            //Get the mime of the file
+
+                        //**get the rest of the file!
+                        buffer = "";                                    //Reset our buffer string because we are about to write to it!
+                        while(y.peek() != EOF) { buffer += (char) y.get(); }    //Read the stringstream till it's end!
+                        buffer = buffer.substr(0, buffer.size() - 4);
+                        files[name] = buffer;
+                    }
+                    else
+                    {
+                        std::stringstream out;
+                        out << y.rdbuf();
+                        std::string x = out.str().substr(0, out.str().size() - 2);
+                        queries[name] = x;
+                        post[name] = x;
+                    }
+                }
             }
         }
     }

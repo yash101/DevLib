@@ -2,8 +2,10 @@
 #include "DevLib/Servers/WebServer.hpp"
 #include "DevLib/string.hpp"
 #include "DevLib/Sockets/tcpclient.hpp"
+#include "DevLib/dynarray.hpp"
 #include <chrono>
 #include <thread>
+#include "DevLib/math.hpp"
 class h : public dev::http_server
 {
     void request_handler(dev::http_session& session)
@@ -42,8 +44,16 @@ class h : public dev::http_server
 
 int main(int argc, char** argv)
 {
-    h().start(12345);
+    long double x = dev::summation<long double>(0, 12, [](long double i)
+    {
+        long double numa = std::pow(-1.0, i);
+        long double dena = dev::factorial((char) (2.0 * i) + 1.0);
+        long double xexp = std::pow(3.14159256, (2.0 * i) + 1);
+        return (numa / dena) * xexp;
+    });
+    std::cout << "SIN THETA[PI/2] -> " << x << std::endl;
+//    h().start(12345);
 
-    while(true) { std::this_thread::sleep_for(std::chrono::seconds(10)); }
+//    while(true) { std::this_thread::sleep_for(std::chrono::seconds(10)); }
     return 0;
 }

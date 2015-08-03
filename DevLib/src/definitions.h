@@ -1,0 +1,4 @@
+#ifndef DEFINITIONS_H
+#define DEFINITIONS_H
+#define DEVLIB_ERROR_BAD_ALLOC -1000
+#endif
